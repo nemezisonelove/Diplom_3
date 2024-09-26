@@ -1,7 +1,7 @@
 package api.clients;
 
-import api.models.models.Credentials;
-import api.models.models.User;
+import api.models.Credentials;
+import api.models.User;
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
 

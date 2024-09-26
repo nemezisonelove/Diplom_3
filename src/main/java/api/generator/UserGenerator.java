@@ -1,6 +1,6 @@
 package api.generator;
 
-import api.models.models.User;
+import api.models.User;
 import manager.TestValue;
 
 /**

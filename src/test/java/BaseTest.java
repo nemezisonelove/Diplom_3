@@ -20,7 +20,7 @@ import org.openqa.selenium.WebDriver;
 public class BaseTest {
 
     // Фейковый пользователь, генерируемый для тестов
-    public static final User User = UserGenerator.getUser();
+    public static final User user = UserGenerator.getUser();
 
     // Экземпляр WebDriver для управления браузером
     public WebDriver driver;
@@ -41,7 +41,7 @@ public class BaseTest {
 
         // Инициализация клиента пользователя и создание пользователя
         userClient = new UserClient();
-        userClient.createUser(User);
+        userClient.createUser(user);
     }
 
     /**
@@ -52,10 +52,10 @@ public class BaseTest {
     @Step("Закрытие браузера")
     public void cleanUp() {
         // Создание учетных данных для логина
-        Credentials credentials = new Credentials(User.getEmail(), User.getPassword());
+        Credentials credentials = new Credentials(user.getEmail(), user.getPassword());
 
         // Логин пользователя
-        Response response = userClient.login(Credentials);
+        Response response = userClient.login(credentials);
 
         // Если есть токен доступа, удаляем пользователя
         if (response.body().jsonPath().getString("accessToken") != null) {
