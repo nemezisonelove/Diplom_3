@@ -3,12 +3,14 @@ import api.clients.UserClient;
 import api.generator.UserGenerator;
 import api.models.Credentials;
 import api.models.User;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
-import manager.BrowserFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 /**
  * Родительский класс для тестов.
@@ -30,18 +32,47 @@ public class BaseTest {
 
     /**
      * Метод, выполняющийся перед каждым тестом.
-     * Открывает браузер Yandex, переходит на базовый URL и создает пользователя.
+     * Открывает браузер (по умолчанию Yandex), переходит на базовый URL и создает пользователя.
      */
     @Before
-    @Step("Открыть страницу")
+    @Step("Открыть страницу и создать пользователя")
     public void setUp() {
-        // Инициализация браузера Yandex через фабрику
-        driver = BrowserFactory.getDriver("yandex");
-        driver.get(Client.BASE_URL); // Переход на базовую страницу
+        if (driver == null) {
+            // Получаем значение браузера из системного свойства или по умолчанию Yandex
+            String browser = System.getProperty("browser", "yandex");
+
+            // Инициализация браузера на основе выбранного браузера
+            switch (browser.toLowerCase()) {
+                case "chrome":
+                    // Используем WebDriverManager для автоматического управления ChromeDriver
+                    WebDriverManager.chromedriver().setup();
+                    driver = new ChromeDriver();
+                    break;
+
+                case "yandex":
+                    // Указываем путь к YandexDriver вручную
+                    System.setProperty("webdriver.chrome.driver", "C:/Program Files/drivers/yandexdriver.exe"); // Путь к YandexDriver
+                    ChromeOptions options = new ChromeOptions();
+                    options.setBinary("C:/Program Files/Yandex/YandexBrowser/Application/browser.exe"); // Укажите путь к Yandex Browser
+                    driver = new ChromeDriver(options);
+                    break;
+
+                default:
+                    throw new RuntimeException("Неизвестный браузер: " + browser);
+            }
+        }
+
+        // Проверка, если браузер уже на главной странице
+        if (!driver.getCurrentUrl().equals(Client.BASE_URL)) {
+            driver.get(Client.BASE_URL); // Переход на базовую страницу
+        }
 
         // Инициализация клиента пользователя и создание пользователя
         userClient = new UserClient();
-        userClient.createUser(user);
+        Response response = userClient.createUser(user);  // Создание пользователя через API
+        if (response.getStatusCode() != 200) {
+            throw new RuntimeException("Не удалось создать пользователя: " + response.asString());
+        }
     }
 
     /**
@@ -49,20 +80,26 @@ public class BaseTest {
      * Логинит пользователя, удаляет его, а затем закрывает браузер.
      */
     @After
-    @Step("Закрытие браузера")
+    @Step("Удаление пользователя и закрытие браузера")
     public void cleanUp() {
-        // Создание учетных данных для логина
-        Credentials credentials = new Credentials(user.getEmail(), user.getPassword());
+        if (userClient != null) {
+            // Создание учетных данных для логина
+            Credentials credentials = new Credentials(user.getEmail(), user.getPassword());
 
-        // Логин пользователя
-        Response response = userClient.login(credentials);
+            // Логин пользователя
+            Response response = userClient.login(credentials);
 
-        // Если есть токен доступа, удаляем пользователя
-        if (response.body().jsonPath().getString("accessToken") != null) {
-            userClient.delete(response);
+            // Если есть токен доступа, удаляем пользователя
+            String accessToken = response.body().jsonPath().getString("accessToken");
+            if (accessToken != null) {
+                userClient.delete(response);
+            }
         }
 
-        // Закрытие браузера
-        driver.quit();
+        // Закрытие браузера, если он был инициализирован
+        if (driver != null) {
+            driver.quit();
+            driver = null; // Сброс драйвера для последующего использования
+        }
     }
 }

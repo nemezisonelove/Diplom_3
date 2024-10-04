@@ -26,6 +26,10 @@ public class SignInPage {
     @FindBy(how = How.XPATH, using = "//a[contains(text(),'Зарегистрироваться')]")
     private SelenideElement signUpButton;
 
+    // Кнопка "Восстановить пароль"
+    @FindBy(how = How.XPATH, using = "//a[contains(text(),'Восстановить пароль')]")
+    private SelenideElement resetPasswordButton;
+
     // Поле Email
     @FindBy(how = How.XPATH, using = "//label[text()='Email']//following-sibling::input")
     private SelenideElement emailField;
@@ -44,21 +48,19 @@ public class SignInPage {
 
     @Step("Клик по кнопке 'Зарегистрироваться'")
     public SignUpPage clickSignUpButton() {
-        signUpButton.click();
+        signUpButton.shouldBe(Condition.visible).click();
         return page(SignUpPage.class);
     }
 
     @Step("Ввод email")
     public SignInPage setEmail(String email) {
-        emailField.click();
-        emailField.val(email);
+        emailField.shouldBe(Condition.visible).val(email);
         return this;
     }
 
     @Step("Ввод пароля")
     public SignInPage setPassword(String password) {
-        passwordField.click();
-        passwordField.val(password);
+        passwordField.shouldBe(Condition.visible).val(password);
         return this;
     }
 
@@ -77,8 +79,6 @@ public class SignInPage {
 
     @Step("Ввод данных для входа")
     public MainPage signUpUser(String email, String password) {
-        emailField.shouldBe(Condition.visible);
-        passwordField.shouldBe(Condition.visible);
         setEmail(email);
         setPassword(password);
         return clickSignInButton();
@@ -93,14 +93,23 @@ public class SignInPage {
     @Step("Проверка отображения текста с ошибкой")
     public SignInPage errorMessageGetText() {
         Assert.assertEquals("Некорректный пароль",
-                errorMessage.shouldBe(Condition.visible)
-                        .getText());
+                errorMessage.shouldBe(Condition.visible).getText());
         return this;
     }
 
     @Step("Клик по ссылке 'Войти'")
     public SignInPage clickEnterLinkButton() {
-        enterLinkButton.click();
+        enterLinkButton.shouldBe(Condition.visible).click();
         return page(SignInPage.class);
+    }
+
+    @Step("Проверить, отображается ли сообщение об ошибке")
+    public boolean isErrorMessageExist() {
+        return errorMessage.shouldBe(Condition.visible).exists();
+    }
+
+    @Step("Получить кнопку 'Восстановить пароль'")
+    public SelenideElement getResetPasswordButton() {
+        return resetPasswordButton.shouldBe(Condition.visible);
     }
 }

@@ -32,7 +32,7 @@ public class UserClient extends Client {
                 .when()
                 .post(REGISTER) // Отправляем POST-запрос на регистрацию
                 .then()
-                .extract(); // Извлекаем ответ
+                .extract().response(); // Извлекаем и возвращаем ответ
     }
 
     /**
@@ -50,16 +50,16 @@ public class UserClient extends Client {
                 .when()
                 .post(LOGIN) // Отправляем POST-запрос на логин
                 .then()
-                .extract(); // Извлекаем ответ
+                .extract().response(); // Извлекаем и возвращаем ответ
     }
 
     /**
      * Удаление пользователя.
-     * Отправляет запрос на удаление пользователя, используя accessToken.
+     * Отправляет запрос на удаление пользователя, используя accessToken, извлеченный из ответа.
      *
      * @param response - ответ сервера, содержащий accessToken.
      */
-    @Step("Удаление пользователя")
+    @Step("Удаление пользователя по ответу")
     public void delete(Response response) {
         // Извлекаем accessToken из ответа
         String accessToken = response.body().jsonPath().getString("accessToken");
@@ -72,6 +72,30 @@ public class UserClient extends Client {
                 .spec(getSpecSettings()) // Устанавливаем спецификацию запроса
                 .header("authorization", accessToken) // Добавляем заголовок авторизации
                 .when()
-                .delete(DELETE); // Отправляем DELETE-запрос
+                .delete(DELETE) // Отправляем DELETE-запрос
+                .then()
+                .statusCode(202); // Проверяем, что удаление прошло успешно (статус код 202)
+    }
+
+    /**
+     * Удаление пользователя.
+     * Отправляет запрос на удаление пользователя, используя переданный accessToken.
+     *
+     * @param accessToken - токен доступа пользователя.
+     */
+    @Step("Удаление пользователя по токену")
+    public void delete(String accessToken) {
+        if (accessToken == null || accessToken.isEmpty()) {
+            return; // Если accessToken отсутствует или пуст, операция отменяется
+        }
+
+        // Отправляем запрос на удаление с использованием токена авторизации
+        given()
+                .spec(getSpecSettings()) // Устанавливаем спецификацию запроса
+                .header("authorization", accessToken) // Добавляем заголовок авторизации
+                .when()
+                .delete(DELETE) // Отправляем DELETE-запрос
+                .then()
+                .statusCode(202); // Проверяем, что удаление прошло успешно (статус код 202)
     }
 }
