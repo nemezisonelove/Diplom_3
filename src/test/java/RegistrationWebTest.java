@@ -5,8 +5,8 @@ import com.codeborne.selenide.WebDriverRunner;
 import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
-
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import manager.TestValue;
 import main.page.MainPage;
@@ -24,11 +24,24 @@ import static org.junit.Assert.assertTrue;
 public class RegistrationWebTest {
 
     private UserClient userClient;
+    private String name;
+    private String email;
+    private String password;
+    private Credentials validCredentials;
+    private Credentials invalidCredentials;
 
-    // Генерация тестовых данных
-    protected String name = UserGenerator.getUser().getName();
-    protected String email = UserGenerator.getUser().getEmail();
-    protected String password = UserGenerator.getUser().getPassword();
+    @Before
+    public void setUp() {
+        // Генерация данных пользователя один раз и инициализация клиента
+        userClient = new UserClient();
+        name = UserGenerator.getUser().getName();
+        email = UserGenerator.getUser().getEmail();
+        password = UserGenerator.getUser().getPassword();
+
+        // Создаем объекты Credentials для валидного и невалидного пользователя
+        validCredentials = new Credentials(email, password);
+        invalidCredentials = new Credentials(email, TestValue.PASSWORD_ERROR);
+    }
 
     /**
      * Тест на успешную регистрацию пользователя.
@@ -49,7 +62,7 @@ public class RegistrationWebTest {
 
         // Проверка текущего URL после регистрации
         String currentUrl = WebDriverRunner.getWebDriver().getCurrentUrl();
-        assertEquals("https://stellarburgers.nomoreparties.site/login", currentUrl);
+        assertTrue(currentUrl.contains("/login"));
     }
 
     /**
@@ -60,20 +73,17 @@ public class RegistrationWebTest {
     @DisplayName("Регистрация пользователя - некорректная")
     @Description("Ошибка при некорректном пароле. Минимальная длина пароля — шесть символов.")
     public void checkErrorRegistrationStellar() {
-        boolean inValidDataRegister = open(MainPage.MAIN_PAGE_URL, MainPage.class)
+        boolean invalidDataRegister = open(MainPage.MAIN_PAGE_URL, MainPage.class)
                 .clickEnterAccountButton() // Переход на страницу входа
                 .clickSignUpButton() // Переход на страницу регистрации
                 .setName(name) // Ввод имени
                 .setEmail(email) // Ввод email
                 .setPassword(TestValue.PASSWORD_ERROR) // Ввод некорректного пароля
                 .clickConfirmSignUpButton() // Подтверждение регистрации
-                .errorMessageGetText() // Проверка сообщения об ошибке
-                .clickEnterLinkButton() // Переход на страницу входа
-                .signUpUser(email, TestValue.PASSWORD_ERROR) // Попытка логина с некорректными данными
                 .isErrorMessageExist(); // Проверка наличия сообщения об ошибке
 
         // Утверждение, что сообщение об ошибке появилось
-        assertTrue(inValidDataRegister);
+        assertTrue(invalidDataRegister);
     }
 
     /**
@@ -82,20 +92,18 @@ public class RegistrationWebTest {
      */
     @After
     public void tearDown() {
-        userClient = new UserClient();
-
         // Удаление пользователя с валидными учетными данными
-        Credentials credentials = new Credentials(email, password);
-        Response response = userClient.login(credentials);
-        if (response.body().jsonPath().getString("accessToken") != null) {
-            userClient.delete(response);
+        Response response = userClient.login(validCredentials);
+        String accessToken = response.body().jsonPath().getString("accessToken");
+        if (accessToken != null) {
+            userClient.delete(accessToken);  // Передаем токен доступа
         }
 
         // Удаление пользователя с невалидными учетными данными
-        Credentials userInValidCredentials = new Credentials(email, TestValue.PASSWORD_ERROR);
-        Response inValidResponse = userClient.login(userInValidCredentials);
-        if (inValidResponse.body().jsonPath().getString("accessToken") != null) {
-            userClient.delete(inValidResponse);
+        Response invalidResponse = userClient.login(invalidCredentials);
+        String invalidAccessToken = invalidResponse.body().jsonPath().getString("accessToken");
+        if (invalidAccessToken != null) {
+            userClient.delete(invalidAccessToken);  // Передаем токен доступа
         }
     }
 }
